@@ -243,8 +243,8 @@ def _def_map(v: float) -> float:
 
 def _nonlinear_map_gk_outfield(v: float, max_ef: float = 103.0, exp: float = 0.38, reduction: float = 0.88, bonus: float = 8.0) -> float:
     """
-    Formula khusus untuk stat non-GK pada kiper.
-    Lebih konservatif dengan reduction factor, tapi tambah bonus kecil (8-10) agar tidak terlalu rendah.
+    Special formula for non-GK stats on goalkeepers.
+    More conservative with reduction factor, but adds small bonus (8-10) to avoid being too low.
     """
     v = max(0.0, float(v))
     if v <= 1.0:
@@ -405,7 +405,7 @@ def train_ensemble(samples: List[Dict[str, Any]]) -> TrainedModel:
         Y_list.append(y)
 
     if len(X_list) < 8:
-        raise RuntimeError(f"Dataset terlalu kecil untuk ML yang stabil. Minimal 8 sampel valid. Dapat: {len(X_list)}")
+        raise RuntimeError(f"Dataset too small for stable ML. Minimum 8 valid samples required. Got: {len(X_list)}")
 
     X = np.vstack(X_list)
     Y = np.vstack(Y_list)
@@ -439,7 +439,7 @@ def predict_ensemble(tm: TrainedModel, ef: Dict[str, Any], position: str, ef_ove
 
     x = build_features(ef_n, pos, ef_overall).reshape(1, -1)
     if x.shape[1] != tm.feature_dim:
-        raise RuntimeError("Feature dimension mismatch. Kamu melatih model dengan versi kode berbeda.")
+        raise RuntimeError("Feature dimension mismatch. You trained the model with a different code version.")
 
     pred_t = tm.model_trees.predict(x)
     pred_r = tm.model_ridge.predict(x)
@@ -521,7 +521,7 @@ def predict_ensemble(tm: TrainedModel, ef: Dict[str, Any], position: str, ef_ove
 
 def apply_ef_max_clamp(pes_stats: Dict[str, int], ef_stats: Dict[str, float]) -> Dict[str, int]:
     """
-    Jika stat eFootball >= 99, hasil PES harus 99 (maksimal).
+    If eFootball stat >= 99, PES result must be 99 (maximum).
     """
     out = dict(pes_stats)
     
@@ -573,8 +573,8 @@ def apply_ef_max_clamp(pes_stats: Dict[str, int], ef_stats: Dict[str, float]) ->
 # -----------------------------
 def compute_pes_overall(pes_stats: Dict[str, int], position: str) -> int:
     """
-    Estimator, bukan formula internal Konami.
-    Gunanya buat kalibrasi target 99 kalau ef_overall > 99.
+    Estimator, not Konami's internal formula.
+    Used for calibrating target 99 when ef_overall > 99.
     """
     pos = (position or "CF").upper()
     g = pos_group(pos)
@@ -652,7 +652,7 @@ def compute_pes_overall(pes_stats: Dict[str, int], position: str) -> int:
 
 def boost_to_target_overall(pes_stats: Dict[str, int], position: str, target: int = 99) -> Dict[str, int]:
     """
-    Naikin stat penting pelan-pelan sampai overall estimator capai target (mentok 99).
+    Gradually increase important stats until overall estimator reaches target (max 99).
     """
     pos = (position or "CF").upper()
     g = pos_group(pos)
@@ -941,7 +941,7 @@ def main_cli():
 
 def to_markdown_table(pes_stats: Dict[str, int], ef_stats: Dict[str, float]) -> str:
     lines = []
-    lines.append("| Atribut PES 2021 | Nilai konversi | Nilai eFootball |")
+    lines.append("| PES 2021 Attribute | Converted Value | eFootball Value |")
     lines.append("|---|---:|---:|")
     
     for attr in PES_ATTR_ORDER:
