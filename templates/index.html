@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konversi Stat eFootball ke PES 2021</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Konversi Stat eFootball ke PES 2021</h1>
+            <p class="text-gray-600">Masukkan stat eFootball dalam format JSON untuk dikonversi ke stat PES 2021</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Input eFootball</h2>
+                
+                <div class="mb-4">
+                    <div class="flex border-b border-gray-200">
+                        <button 
+                            type="button"
+                            id="tabJson"
+                            class="tab-button px-6 py-3 text-sm font-medium border-b-2 border-blue-600 text-blue-600"
+                        >
+                            JSON
+                        </button>
+                        <button 
+                            type="button"
+                            id="tabManual"
+                            class="tab-button px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+                        >
+                            Manual
+                        </button>
+                    </div>
+                </div>
+
+                <form id="convertForm" class="space-y-4">
+                    <div id="tabContentJson" class="tab-content">
+                        <div>
+                            <label for="efJson" class="block text-sm font-medium text-gray-700 mb-2">
+                                JSON Stat eFootball
+                            </label>
+                            <textarea 
+                                id="efJson" 
+                                name="efJson" 
+                                rows="15" 
+                                class="json-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                                placeholder='{"offensive_awareness": 96, "ball_control": 84, "dribbling": 88, ...}'
+                            ></textarea>
+                            <p class="mt-2 text-xs text-gray-500" id="jsonError"></p>
+                        </div>
+                    </div>
+
+                    <div id="tabContentManual" class="tab-content hidden">
+                        <div class="space-y-6 max-h-96 overflow-y-auto pr-2">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700 mb-3">Attacking</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label for="offensive_awareness" class="block text-xs font-medium text-gray-600 mb-1">Offensive Awareness</label>
+                                        <input type="number" id="offensive_awareness" min="1" max="120" placeholder="Contoh: 96" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="ball_control" class="block text-xs font-medium text-gray-600 mb-1">Ball Control</label>
+                                        <input type="number" id="ball_control" min="1" max="120" placeholder="Contoh: 84" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="dribbling" class="block text-xs font-medium text-gray-600 mb-1">Dribbling</label>
+                                        <input type="number" id="dribbling" min="1" max="120" placeholder="Contoh: 89" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="tight_possession" class="block text-xs font-medium text-gray-600 mb-1">Tight Possession</label>
+                                        <input type="number" id="tight_possession" min="1" max="120" placeholder="Contoh: 90" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="low_pass" class="block text-xs font-medium text-gray-600 mb-1">Low Pass</label>
+                                        <input type="number" id="low_pass" min="1" max="120" placeholder="Contoh: 95" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="lofted_pass" class="block text-xs font-medium text-gray-600 mb-1">Lofted Pass</label>
+                                        <input type="number" id="lofted_pass" min="1" max="120" placeholder="Contoh: 99" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="finishing" class="block text-xs font-medium text-gray-600 mb-1">Finishing</label>
+                                        <input type="number" id="finishing" min="1" max="120" placeholder="Contoh: 85" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="heading" class="block text-xs font-medium text-gray-600 mb-1">Heading</label>
+                                        <input type="number" id="heading" min="1" max="120" placeholder="Contoh: 62" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="place_kicking" class="block text-xs font-medium text-gray-600 mb-1">Place Kicking</label>
+                                        <input type="number" id="place_kicking" min="1" max="120" placeholder="Contoh: 94" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="curl" class="block text-xs font-medium text-gray-600 mb-1">Curl</label>
+                                        <input type="number" id="curl" min="1" max="120" placeholder="Contoh: 100" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700 mb-3">Physical</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label for="speed" class="block text-xs font-medium text-gray-600 mb-1">Speed</label>
+                                        <input type="number" id="speed" min="1" max="120" placeholder="Contoh: 89" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="acceleration" class="block text-xs font-medium text-gray-600 mb-1">Acceleration</label>
+                                        <input type="number" id="acceleration" min="1" max="120" placeholder="Contoh: 86" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="kicking_power" class="block text-xs font-medium text-gray-600 mb-1">Kicking Power</label>
+                                        <input type="number" id="kicking_power" min="1" max="120" placeholder="Contoh: 95" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="jump" class="block text-xs font-medium text-gray-600 mb-1">Jump</label>
+                                        <input type="number" id="jump" min="1" max="120" placeholder="Contoh: 59" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="physical_contact" class="block text-xs font-medium text-gray-600 mb-1">Physical Contact</label>
+                                        <input type="number" id="physical_contact" min="1" max="120" placeholder="Contoh: 67" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="balance" class="block text-xs font-medium text-gray-600 mb-1">Balance</label>
+                                        <input type="number" id="balance" min="1" max="120" placeholder="Contoh: 82" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="stamina" class="block text-xs font-medium text-gray-600 mb-1">Stamina</label>
+                                        <input type="number" id="stamina" min="1" max="120" placeholder="Contoh: 94" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700 mb-3">Defending</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label for="defensive_awareness" class="block text-xs font-medium text-gray-600 mb-1">Defensive Awareness</label>
+                                        <input type="number" id="defensive_awareness" min="1" max="120" placeholder="Contoh: 60" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="defensive_engagement" class="block text-xs font-medium text-gray-600 mb-1">Defensive Engagement</label>
+                                        <input type="number" id="defensive_engagement" min="1" max="120" placeholder="Contoh: 60" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="tackling" class="block text-xs font-medium text-gray-600 mb-1">Tackling</label>
+                                        <input type="number" id="tackling" min="1" max="120" placeholder="Contoh: 56" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="aggression" class="block text-xs font-medium text-gray-600 mb-1">Aggression</label>
+                                        <input type="number" id="aggression" min="1" max="120" placeholder="Contoh: 64" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700 mb-3">Goalkeeper</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label for="goalkeeping" class="block text-xs font-medium text-gray-600 mb-1">GK Awareness</label>
+                                        <input type="number" id="goalkeeping" min="1" max="120" placeholder="Contoh: 41" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="gk_catching" class="block text-xs font-medium text-gray-600 mb-1">GK Catching</label>
+                                        <input type="number" id="gk_catching" min="1" max="120" placeholder="Contoh: 41" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="gk_parrying" class="block text-xs font-medium text-gray-600 mb-1">GK Clearing</label>
+                                        <input type="number" id="gk_parrying" min="1" max="120" placeholder="Contoh: 41" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="gk_reflexes" class="block text-xs font-medium text-gray-600 mb-1">GK Reflexes</label>
+                                        <input type="number" id="gk_reflexes" min="1" max="120" placeholder="Contoh: 41" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="gk_reach" class="block text-xs font-medium text-gray-600 mb-1">GK Reach</label>
+                                        <input type="number" id="gk_reach" min="1" max="120" placeholder="Contoh: 41" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700 mb-3">Other</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label for="weak_foot_usage" class="block text-xs font-medium text-gray-600 mb-1">Weak Foot Usage (1-4)</label>
+                                        <input type="number" id="weak_foot_usage" min="1" max="4" placeholder="Contoh: 0" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="weak_foot_acc" class="block text-xs font-medium text-gray-600 mb-1">Weak Foot Accuracy (1-4)</label>
+                                        <input type="number" id="weak_foot_acc" min="1" max="4" placeholder="Contoh: 1" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="form" class="block text-xs font-medium text-gray-600 mb-1">Form (1-8)</label>
+                                        <input type="number" id="form" min="1" max="8" placeholder="Contoh: 2" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label for="injury_resistance" class="block text-xs font-medium text-gray-600 mb-1">Injury Resistance (1-3)</label>
+                                        <input type="number" id="injury_resistance" min="1" max="3" placeholder="Contoh: 1" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="position" class="block text-sm font-medium text-gray-700 mb-2">
+                                Posisi Pemain
+                            </label>
+                            <select 
+                                id="position" 
+                                name="position" 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value="CF">CF - Center Forward</option>
+                                <option value="SS">SS - Second Striker</option>
+                                <option value="LWF">LWF - Left Wing Forward</option>
+                                <option value="RWF">RWF - Right Wing Forward</option>
+                                <option value="AMF">AMF - Attacking Midfielder</option>
+                                <option value="LMF">LMF - Left Midfielder</option>
+                                <option value="RMF">RMF - Right Midfielder</option>
+                                <option value="CMF">CMF - Center Midfielder</option>
+                                <option value="DMF">DMF - Defensive Midfielder</option>
+                                <option value="LB">LB - Left Back</option>
+                                <option value="RB">RB - Right Back</option>
+                                <option value="CB">CB - Center Back</option>
+                                <option value="GK">GK - Goalkeeper</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="efOverall" class="block text-sm font-medium text-gray-700 mb-2">
+                                Overall Rating eFootball (Opsional)
+                            </label>
+                            <input 
+                                type="number" 
+                                id="efOverall" 
+                                name="efOverall" 
+                                min="1" 
+                                max="120" 
+                                placeholder="Contoh: 100"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                            <p class="mt-1 text-xs text-gray-500">Setiap stat yang hasil konversinya > 99 akan di-clamp ke 99 (maksimal PES 2021)</p>
+                        </div>
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        id="convertBtn"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                        Konversi
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Hasil Konversi PES 2021</h2>
+                
+                <div id="loading" class="hidden text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p class="mt-2 text-gray-600">Memproses konversi...</p>
+                </div>
+
+                <div id="error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4"></div>
+
+                <div id="results" class="hidden">
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-lg font-semibold text-gray-700">Overall Rating PES 2021</h3>
+                            <span id="pesOverall" class="text-2xl font-bold text-blue-600">-</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">JSON Result</h3>
+                        <pre id="jsonResult" class="json-output bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-auto max-h-96 text-sm font-mono"></pre>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Tabel Markdown</h3>
+                        <div id="markdownTable" class="markdown-table overflow-auto border border-gray-200 rounded-lg p-4 max-h-96"></div>
+                    </div>
+                </div>
+
+                <div id="empty" class="text-center py-12 text-gray-400">
+                    <p>Hasil konversi akan muncul di sini</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
+
