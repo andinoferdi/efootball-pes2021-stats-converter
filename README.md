@@ -25,7 +25,7 @@ Konverter statistik pemain dari eFootball 2025 ke PES 2021 menggunakan Machine L
 1. Clone repository:
 ```bash
 git clone https://github.com/andinoferdi/efootball-pes2021-stats-converter.git
-cd efootball-to-pes2021-converter
+cd efootball-pes2021-stats-converter
 ```
 
 2. Install dependencies:
