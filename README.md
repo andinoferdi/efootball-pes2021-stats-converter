@@ -1,26 +1,28 @@
 # eFootball to PES 2021 Stats Converter
 
-Konverter statistik pemain dari eFootball 2025 ke PES 2021 menggunakan Machine Learning (ML) dengan ensemble model (ExtraTrees + Ridge Regression).
+Convert player statistics from eFootball 2025 to PES 2021 using Machine Learning (ML) with ensemble model (ExtraTrees + Ridge Regression).
 
-## Fitur
+## Features
 
-- Konversi statistik eFootball ke PES 2021 dengan akurasi tinggi
+- High accuracy eFootball to PES 2021 statistics conversion
 - Machine Learning ensemble model (ExtraTrees + Ridge)
-- Web interface dengan Flask
-- Input mode: JSON atau Manual (form input)
-- Handling khusus untuk kiper (stat non-GK lebih realistis)
-- Auto-clamp stat >= 99 di eFootball menjadi 99 di PES 2021
-- Overall rating calculator untuk PES 2021
-- Dataset builder dari PESMaster (scraper)
+- Modern web interface with Flask
+- Dark mode support with theme toggle
+- Input modes: JSON or Manual (form input)
+- Special handling for goalkeepers (more realistic non-GK stats)
+- Auto-clamp stats >= 99 in eFootball to 99 in PES 2021
+- Overall rating calculator for PES 2021
+- Dataset builder from PESMaster (scraper)
 
-## Teknologi
+## Technologies
 
 - **Backend**: Python, Flask
 - **Machine Learning**: scikit-learn (ExtraTreesRegressor, Ridge)
-- **Frontend**: HTML, Tailwind CSS, JavaScript
+- **Frontend**: HTML, Tailwind CSS, JavaScript (modular architecture)
+- **Styling**: Modular CSS (base, components, animations)
 - **Data Processing**: NumPy, BeautifulSoup4
 
-## Instalasi
+## Installation
 
 1. Clone repository:
 ```bash
@@ -33,36 +35,40 @@ cd efootball-pes2021-stats-converter
 pip install -r requirements.txt
 ```
 
-## Cara Menggunakan
+## Usage
 
 ### Web Interface
 
-1. Jalankan server:
+1. Run server:
 ```bash
 python app.py
 ```
 
-2. Buka browser:
+2. Open browser:
 ```
 http://localhost:5000
 ```
 
-3. Input stat eFootball:
-   - **Tab JSON**: Paste JSON stat eFootball
-   - **Tab Manual**: Isi form input untuk setiap stat
-4. Pilih posisi pemain
-5. (Opsional) Masukkan Overall Rating eFootball
-6. Klik "Konversi"
+3. Input eFootball stats:
+   - **JSON Tab**: Paste JSON eFootball stats
+   - **Manual Tab**: Fill form inputs for each stat
+4. Select player position
+5. (Optional) Enter eFootball Overall Rating
+6. Click "Convert Stats"
+
+### Dark Mode
+
+The interface includes dark mode support by default. Use the theme toggle button in the top-right corner to switch between light and dark themes. Your preference is saved in localStorage.
 
 ### CLI Mode
 
-#### Scrape Data dari PESMaster
+#### Scrape Data from PESMaster
 
 ```bash
 python app.py --scrape --urls urls.txt --out dataset.jsonl
 ```
 
-File `urls.txt` berisi URL PESMaster eFootball player pages (satu per baris).
+File `urls.txt` contains PESMaster eFootball player page URLs (one per line).
 
 #### Train Model
 
@@ -70,7 +76,7 @@ File `urls.txt` berisi URL PESMaster eFootball player pages (satu per baris).
 python app.py --train --data dataset.jsonl --model model.joblib
 ```
 
-Minimal 8 training samples diperlukan untuk training yang stabil.
+Minimum 8 training samples required for stable training.
 
 ## Format Input JSON
 
@@ -135,58 +141,66 @@ Response:
     ...
   },
   "pes_overall": 95,
-  "markdown_table": "| Atribut PES 2021 | ..."
+  "markdown_table": "| PES 2021 Attribute | Converted Value | eFootball Value |"
 }
 ```
 
-## Fitur Khusus
+## Special Features
 
-### Handling Kiper
+### Goalkeeper Handling
 
-Stat non-GK untuk kiper menggunakan formula khusus yang lebih konservatif agar lebih realistis. Contoh:
-- Ball Control 60 di eFootball → ~68 di PES 2021 (bukan ~83)
+Non-GK stats for goalkeepers use a special formula that is more conservative for realism. Example:
+- Ball Control 60 in eFootball → ~68 in PES 2021 (not ~83)
 
 ### Auto Clamp
 
-Stat eFootball >= 99 otomatis di-clamp menjadi 99 di PES 2021 (maksimal PES 2021).
+eFootball stats >= 99 are automatically clamped to 99 in PES 2021 (PES 2021 maximum).
 
 ### Overall Rating
 
-Overall rating PES 2021 dihitung berdasarkan posisi pemain dengan bobot berbeda untuk setiap statistik.
+PES 2021 overall rating is calculated based on player position with different weights for each statistic.
 
-## Struktur Proyek
+## Project Structure
 
 ```
 .
 ├── app.py                 # Main application (Flask + ML)
 ├── requirements.txt       # Python dependencies
-├── README.md             # Dokumentasi
+├── README.md             # Documentation
 ├── templates/
 │   └── index.html        # Web interface
 └── static/
     ├── css/
-    │   └── custom.css    # Custom styling
+    │   ├── base.css      # Base styles and CSS variables
+    │   ├── components.css # Component styles
+    │   └── animations.css # Animation styles
     └── js/
-        └── main.js       # Frontend JavaScript
+        ├── theme.js      # Theme management (dark mode)
+        ├── utils.js      # Utility functions
+        ├── tabs.js       # Tab functionality
+        ├── accordion.js  # Accordion functionality
+        ├── form.js       # Form handling
+        └── effects.js     # Visual effects
 ```
 
-## Model Machine Learning
+## Machine Learning Model
 
 - **Ensemble**: ExtraTreesRegressor (60%) + Ridge Regression (40%)
 - **Features**: Raw stats, baseline guess, position encoding, interactions
-- **Training**: Minimal 8 samples, optimal 20+ samples
+- **Training**: Minimum 8 samples, optimal 20+ samples
 
-## Lisensi
+## License
 
 MIT License
 
-## Kontribusi
+## Contributing
 
-Kontribusi sangat diterima. Silakan buat issue atau pull request.
+Contributions are welcome. Please create an issue or pull request.
 
-## Catatan
+## Notes
 
-- Model ML memerlukan training data untuk akurasi optimal
-- Tanpa model, sistem menggunakan baseline formula
-- Scraper PESMaster memerlukan koneksi internet
+- ML model requires training data for optimal accuracy
+- Without model, system uses baseline formula
+- PESMaster scraper requires internet connection
+- Dark mode is enabled by default
 
