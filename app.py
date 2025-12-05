@@ -178,6 +178,141 @@ def ensure_int_dict(d: Dict[str, Any]) -> Dict[str, int]:
     return out
 
 
+def _clamp(v: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, v))
+
+
+def _ef_value_for_pes_attr(attr: str, ef: Dict[str, float]) -> float:
+    m = {
+        "Offensive Awareness": "offensive_awareness",
+        "Ball Control": "ball_control",
+        "Dribbling": "dribbling",
+        "Tight Possession": "tight_possession",
+        "Low Pass": "low_pass",
+        "Lofted Pass": "lofted_pass",
+        "Finishing": "finishing",
+        "Heading": "heading",
+        "Place Kicking": "place_kicking",
+        "Curl": "curl",
+        "Speed": "speed",
+        "Acceleration": "acceleration",
+        "Kicking Power": "kicking_power",
+        "Jump": "jump",
+        "Physical Contact": "physical_contact",
+        "Balance": "balance",
+        "Stamina": "stamina",
+        "Defensive Awareness": "defensive_awareness",
+        "Aggression": "aggression",
+        "GK Awareness": "goalkeeping",
+        "GK Catching": "gk_catching",
+        "GK Clearing": "gk_parrying",
+        "GK Reflexes": "gk_reflexes",
+        "GK Reach": "gk_reach",
+    }
+    if attr == "Ball Winning":
+        de = ef.get("defensive_engagement", 0.0)
+        tk = ef.get("tackling", 0.0)
+        return 0.5 * (de + tk)
+    key = m.get(attr)
+    return float(ef.get(key, 0.0)) if key else 0.0
+
+
+def _attr_group(attr: str) -> str:
+    if attr.startswith("GK"):
+        return "GK"
+    if attr in {"Offensive Awareness", "Finishing"}:
+        return "ATT"
+    if attr in {"Ball Control", "Dribbling", "Tight Possession", "Low Pass", "Lofted Pass", "Place Kicking", "Curl"}:
+        return "TECH"
+    if attr in {"Defensive Awareness", "Ball Winning", "Aggression"}:
+        return "DEF"
+    return "PHY"
+
+
+def _base_bonus(v: float) -> int:
+    v = float(_clamp(v, 1.0, 99.0))
+    if v < 60:
+        return 3
+    if v < 70:
+        return 4
+    if v < 80:
+        return 5
+    if v < 90:
+        return 6
+    if v < 96:
+        return 4
+    return 2
+
+
+def _max_up(v: float, grp: str) -> int:
+    v = float(_clamp(v, 1.0, 99.0))
+    if grp == "DEF":
+        if v < 65:
+            return 10
+        if v < 75:
+            return 9
+        if v < 85:
+            return 8
+        if v < 90:
+            return 7
+        return 6
+    if v >= 97:
+        return 2
+    if v >= 90:
+        return 6
+    if v >= 80:
+        return 8
+    if v >= 70:
+        return 7
+    return 5
+
+
+def apply_position_calibration(pes_stats: Dict[str, int], ef_stats: Dict[str, float], position: str, strength: float = 1.0) -> Dict[str, int]:
+    out = dict(pes_stats)
+    posg = pos_group(position)
+    
+    GROUP_BIAS = {"ATT": 2, "TECH": 1, "PHY": 1, "DEF": 1, "GK": 0}
+    
+    POS_BIAS = {
+        "FWD": {"ATT": 1, "TECH": 0, "PHY": 0, "DEF": 0},
+        "MID": {"ATT": 0, "TECH": 1, "PHY": 0, "DEF": 0},
+        "DEF": {"ATT": -1, "TECH": -1, "PHY": 0, "DEF": 1},
+        "GK": {"GK": 1},
+    }
+    
+    skip = set(SMALL_RANGE_ATTRS.keys())
+    
+    for attr in CORE_ATTRS:
+        if attr in skip:
+            continue
+        
+        grp = _attr_group(attr)
+        
+        if posg != "GK" and grp == "GK":
+            continue
+        
+        if posg == "GK" and grp != "GK":
+            continue
+        
+        efv = float(_clamp(_ef_value_for_pes_attr(attr, ef_stats), 1.0, 99.0))
+        
+        b = _base_bonus(efv)
+        b += GROUP_BIAS.get(grp, 0)
+        b += POS_BIAS.get(posg, {}).get(grp, 0)
+        
+        b = int(round(max(0.0, b * float(strength))))
+        
+        cur = int(out.get(attr, 40))
+        target = clamp_int(cur + b, 1, 99)
+        
+        lo = clamp_int(efv - 5, 1, 99)
+        hi = clamp_int(efv + _max_up(efv, grp), 1, 99)
+        
+        out[attr] = clamp_int(target, lo, hi)
+    
+    return out
+
+
 def normalize_ef_stats(raw: Dict[str, Any]) -> Dict[str, float]:
     """
     Normalize keys from various sources into EF_KEYS.
@@ -219,6 +354,19 @@ def normalize_ef_stats(raw: Dict[str, Any]) -> Dict[str, float]:
 # -----------------------------
 # Feature engineering (ML, not exposed as mode)
 # -----------------------------
+def _map_like_pes(v: float) -> float:
+    """
+    EF core stats sudah skala mirip PES (1..99).
+    Kalau ada boosted >99, PES tetap mentok 99.
+    """
+    v = float(v)
+    if v <= 1.0:
+        return 1.0
+    if v >= 99.0:
+        return 99.0
+    return v
+
+
 def _nonlinear_map(v: float, max_ef: float = 103.0, exp: float = 0.33) -> float:
     """
     Smooth monotonic squashing, designed for scale up to 103.
@@ -227,7 +375,6 @@ def _nonlinear_map(v: float, max_ef: float = 103.0, exp: float = 0.33) -> float:
     v = max(0.0, float(v))
     if v <= 1.0:
         return 1.0
-    # keep low stats less distorted, high stats saturate
     scaled = 99.0 * pow(min(v, max_ef) / max_ef, exp)
     return float(np.clip(scaled, 1.0, 99.0))
 
@@ -260,44 +407,36 @@ def baseline_pes_guess(ef: Dict[str, float], position: str) -> Dict[str, float]:
     """
     gk = pos_group(position) == "GK" or ef.get("goalkeeping", 0.0) >= 60.0
 
-    if gk:
-        map_func = lambda v: _nonlinear_map_gk_outfield(v, exp=0.38, reduction=0.88, bonus=8.0)
-        def_map_func = lambda v: _nonlinear_map_gk_outfield(v, exp=0.36, reduction=0.85, bonus=8.0)
-    else:
-        map_func = _nonlinear_map
-        def_map_func = _def_map
-
     out: Dict[str, float] = {}
-    out["Offensive Awareness"] = map_func(ef["offensive_awareness"])
-    out["Ball Control"] = map_func(ef["ball_control"])
-    out["Dribbling"] = map_func(ef["dribbling"])
-    out["Tight Possession"] = map_func(ef["tight_possession"])
-    out["Low Pass"] = map_func(ef["low_pass"])
-    out["Lofted Pass"] = map_func(ef["lofted_pass"])
-    out["Finishing"] = map_func(ef["finishing"])
-    out["Heading"] = map_func(ef["heading"])
-    out["Place Kicking"] = map_func(ef["place_kicking"])
-    out["Curl"] = map_func(ef["curl"])
+    out["Offensive Awareness"] = _map_like_pes(ef["offensive_awareness"])
+    out["Ball Control"] = _map_like_pes(ef["ball_control"])
+    out["Dribbling"] = _map_like_pes(ef["dribbling"])
+    out["Tight Possession"] = _map_like_pes(ef["tight_possession"])
+    out["Low Pass"] = _map_like_pes(ef["low_pass"])
+    out["Lofted Pass"] = _map_like_pes(ef["lofted_pass"])
+    out["Finishing"] = _map_like_pes(ef["finishing"])
+    out["Heading"] = _map_like_pes(ef["heading"])
+    out["Place Kicking"] = _map_like_pes(ef["place_kicking"])
+    out["Curl"] = _map_like_pes(ef["curl"])
 
-    out["Speed"] = map_func(ef["speed"])
-    out["Acceleration"] = map_func(ef["acceleration"])
-    out["Kicking Power"] = map_func(ef["kicking_power"])
-    out["Jump"] = map_func(ef["jump"])
-    out["Physical Contact"] = map_func(ef["physical_contact"])
-    out["Balance"] = map_func(ef["balance"])
-    out["Stamina"] = map_func(ef["stamina"])
+    out["Speed"] = _map_like_pes(ef["speed"])
+    out["Acceleration"] = _map_like_pes(ef["acceleration"])
+    out["Kicking Power"] = _map_like_pes(ef["kicking_power"])
+    out["Jump"] = _map_like_pes(ef["jump"])
+    out["Physical Contact"] = _map_like_pes(ef["physical_contact"])
+    out["Balance"] = _map_like_pes(ef["balance"])
+    out["Stamina"] = _map_like_pes(ef["stamina"])
 
-    out["Defensive Awareness"] = def_map_func(ef["defensive_awareness"])
-    out["Ball Winning"] = def_map_func(0.5 * (ef["defensive_engagement"] + ef["tackling"]))
-    out["Aggression"] = def_map_func(ef["aggression"])
+    out["Defensive Awareness"] = _map_like_pes(ef["defensive_awareness"])
+    out["Ball Winning"] = _map_like_pes(0.5 * (ef["defensive_engagement"] + ef["tackling"]))
+    out["Aggression"] = _map_like_pes(ef["aggression"])
 
-    # GK
     if gk:
-        out["GK Awareness"] = _nonlinear_map(ef["goalkeeping"], exp=0.30)
-        out["GK Catching"] = _nonlinear_map(ef["gk_catching"], exp=0.30)
-        out["GK Clearing"] = _nonlinear_map(ef["gk_parrying"], exp=0.30)
-        out["GK Reflexes"] = _nonlinear_map(ef["gk_reflexes"], exp=0.30)
-        out["GK Reach"] = _nonlinear_map(ef["gk_reach"], exp=0.30)
+        out["GK Awareness"] = _map_like_pes(ef["goalkeeping"])
+        out["GK Catching"] = _map_like_pes(ef["gk_catching"])
+        out["GK Clearing"] = _map_like_pes(ef["gk_parrying"])
+        out["GK Reflexes"] = _map_like_pes(ef["gk_reflexes"])
+        out["GK Reach"] = _map_like_pes(ef["gk_reach"])
     else:
         out["GK Awareness"] = 40.0
         out["GK Catching"] = 40.0
@@ -305,7 +444,6 @@ def baseline_pes_guess(ef: Dict[str, float], position: str) -> Dict[str, float]:
         out["GK Reflexes"] = 40.0
         out["GK Reach"] = 40.0
 
-    # Small-range fields are handled separately (not predicted)
     return out
 
 
@@ -514,7 +652,10 @@ def predict_ensemble(tm: TrainedModel, ef: Dict[str, Any], position: str, ef_ove
             "Form": "form",
             "Injury Resistance": "injury_resistance",
         }[a]
-        out[a] = clamp_int(ef_n.get(key, lo), lo, hi)
+        ef_val = ef_n.get(key, lo)
+        if ef_val <= 0:
+            ef_val = lo
+        out[a] = clamp_int(ef_val, lo, hi)
 
     return out
 
@@ -564,6 +705,58 @@ def apply_ef_max_clamp(pes_stats: Dict[str, int], ef_stats: Dict[str, float]) ->
         ef_bw = 0.5 * (de + tk)
         if ef_bw >= 99.0:
             out["Ball Winning"] = 99
+    
+    return out
+
+
+def apply_sanity_bounds(pes: Dict[str, int], ef: Dict[str, float], position: str) -> Dict[str, int]:
+    """
+    ML boleh kreatif, tapi perlu rem supaya tidak ngawur.
+    Clamp output ke range [ef - margin, ef + margin] untuk mencegah inflasi tidak masuk akal.
+    """
+    out = dict(pes)
+    
+    def get_bw():
+        return 0.5 * (ef.get("defensive_engagement", 0.0) + ef.get("tackling", 0.0))
+    
+    M6 = 6
+    M10 = 10
+    
+    bounds = {
+        "Offensive Awareness": ("offensive_awareness", M6),
+        "Ball Control": ("ball_control", M6),
+        "Dribbling": ("dribbling", M6),
+        "Tight Possession": ("tight_possession", M6),
+        "Low Pass": ("low_pass", M6),
+        "Lofted Pass": ("lofted_pass", M6),
+        "Finishing": ("finishing", M6),
+        "Heading": ("heading", M6),
+        "Place Kicking": ("place_kicking", M6),
+        "Curl": ("curl", M6),
+        "Speed": ("speed", M6),
+        "Acceleration": ("acceleration", M6),
+        "Kicking Power": ("kicking_power", M6),
+        "Jump": ("jump", M6),
+        "Physical Contact": ("physical_contact", M6),
+        "Balance": ("balance", M6),
+        "Stamina": ("stamina", M6),
+        "Defensive Awareness": ("defensive_awareness", M10),
+        "Aggression": ("aggression", M10),
+    }
+    
+    for attr, (ef_key, margin) in bounds.items():
+        if attr not in out:
+            continue
+        efv = float(ef.get(ef_key, out[attr]))
+        lo = max(1, int(round(efv - margin)))
+        hi = min(99, int(round(efv + margin)))
+        out[attr] = clamp_int(out[attr], lo, hi)
+    
+    if "Ball Winning" in out:
+        efv = float(get_bw())
+        lo = max(1, int(round(efv - M10)))
+        hi = min(99, int(round(efv + M10)))
+        out["Ball Winning"] = clamp_int(out["Ball Winning"], lo, hi)
     
     return out
 
@@ -792,24 +985,37 @@ def find_first_href(html: str, pattern: str) -> Optional[str]:
 def parse_stats_by_labels(html: str, wanted: Dict[str, str]) -> Dict[str, int]:
     """
     Parse page by scanning text lines. Works across different PESMaster layouts.
+    Label dan angka bisa terpisah baris, jadi cek tetangga label (atas dan bawah).
     wanted: label -> output_key
     """
     soup = BeautifulSoup(html, "lxml")
     text = soup.get_text("\n")
     lines = [x.strip() for x in text.split("\n") if x.strip()]
     out: Dict[str, int] = {}
-
+    
+    def parse_num(s: str) -> Optional[int]:
+        m = re.search(r"(\d{1,3})", s)
+        if not m:
+            return None
+        v = int(m.group(1))
+        if 1 <= v <= 120:
+            return v
+        return None
+    
     for i, line in enumerate(lines):
+        low = line.lower()
         for label, key in wanted.items():
-            if label.lower() in line.lower():
-                parts = line.split()
-                for j, part in enumerate(parts):
-                    if part.isdigit() or (part.replace(".", "").isdigit() and "." in part):
-                        val = int(float(part))
-                        if 1 <= val <= 120:
-                            out[key] = val
-                            break
+            if label.lower() == low:
+                candidates = []
+                for j in (i-2, i-1, i+1, i+2):
+                    if 0 <= j < len(lines):
+                        v = parse_num(lines[j])
+                        if v is not None:
+                            candidates.append(v)
+                if candidates:
+                    out[key] = candidates[0]
                 break
+    
     return out
 
 
@@ -1035,6 +1241,7 @@ def api_convert():
         
         if model:
             pes_stats = predict_ensemble(model, ef_stats, position, ef_overall)
+            strength = 0.7
         else:
             base = baseline_pes_guess(ef_stats, position)
             pes_stats = {k: clamp_int(v, 1, 99) for k, v in base.items()}
@@ -1054,9 +1261,16 @@ def api_convert():
                     "Form": "form",
                     "Injury Resistance": "injury_resistance",
                 }[a]
-                pes_stats[a] = clamp_int(ef_stats.get(key, lo), lo, hi)
+                ef_val = ef_stats.get(key, lo)
+                if ef_val <= 0:
+                    ef_val = lo
+                pes_stats[a] = clamp_int(ef_val, lo, hi)
+            
+            strength = 1.0
         
+        pes_stats = apply_position_calibration(pes_stats, ef_stats, position, strength=strength)
         pes_stats = apply_ef_max_clamp(pes_stats, ef_stats)
+        pes_stats = apply_sanity_bounds(pes_stats, ef_stats, position)
         
         pes_overall = compute_pes_overall(pes_stats, position)
         
